@@ -1,5 +1,6 @@
 #include "Network.h"
 
+
 bool PNet::Network::Initialize()
 {
     WSADATA wsadata;
@@ -11,13 +12,13 @@ bool PNet::Network::Initialize()
         return false;
     }
 
-    if (LOBYTE(wsadata.wVersion != 2) || HIBYTE(wsadata.wVersion) != 2)
+    if (LOBYTE(wsadata.wVersion) != 2 || HIBYTE(wsadata.wVersion) != 2)
     {
         std::cerr << "Could not find the usable version of winsock API." << std::endl;
         return false;
     }
 
-    return false;
+    return true;
 }
 
 void PNet::Network::Shutdown()

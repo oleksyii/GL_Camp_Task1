@@ -1,9 +1,15 @@
 //Client code
 
 #include <PNet/IncludeMe.h>
+#include <iostream>
+
+using namespace PNet;
 
 int main()
 {
-	int value = PNet::ReturnFive();
-	return 0;
+	if (Network::Initialize()) {
+		std::cout << "Winsock API succesfully itialized." << std::endl;
+	}
+	Network::Shutdown();
+
 }
