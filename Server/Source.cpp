@@ -32,13 +32,36 @@ int main()
 		if (socket.Create() == PResult::P_Success)
 		{
 			std::cout << "Socket successfully created." << std::endl;
-			if (socket.Bind(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
+			if (socket.Listen(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
 			{
-				std::cout << "Socket succesfully bound to port 4790." << std::endl;
+				std::cout << "Socket succesfully listening to port 4790." << std::endl;
+				Socket newConnection;
+				if (socket.Accept(newConnection) == PResult::P_Success)
+				{
+					std::cout << "New connection accepted." << std::endl;
+
+					char buffer[256];
+					int bytesRecieved = 0;
+					PResult result = PResult::P_Success;
+
+					while (result == PResult::P_Success)
+					{
+						result = newConnection.Recv(buffer, sizeof(buffer), bytesRecieved);
+						if (result != PResult::P_Success)
+							break;
+						std::cout << buffer << std::endl;
+					}
+
+					newConnection.Close();
+				}
+				else
+				{
+					std::cerr << "Failed to accept new connection" << std::endl;
+				}
 			}
 			else
 			{
-				std::cerr << "Failed to bind a socket to port 4790" << std::endl;
+				std::cerr << "Failed to listen a socket to port 4790" << std::endl;
 			}
 			socket.Close();
 		}

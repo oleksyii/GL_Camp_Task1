@@ -16,7 +16,12 @@ namespace PNet
 		PResult Close();
 		PResult Bind(IPEndpoint endpoint);
 		SocketHandle GetHandle();
+		PResult Accept(Socket& outSocket);
+		PResult Connect(IPEndpoint endpoint);
+		PResult Send(void* data, int numberOfBytes, int& bytesSent);
+		PResult Recv(void* destination, int numberOfBytes, int& bytesRecieved);
 		IPVersion GetIPVersion();
+		PResult Listen(IPEndpoint endpoint, int backlog = 5);
 	private:
 		PResult SetSocketOption(SocketOption option, BOOL value);
 		IPVersion ipversion = IPVersion::IPv4;

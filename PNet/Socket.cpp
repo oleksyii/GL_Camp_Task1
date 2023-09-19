@@ -1,5 +1,6 @@
 #include "Socket.h"
 #include <assert.h>
+#include <iostream>
 
 namespace PNet
 {
@@ -75,6 +76,83 @@ namespace PNet
 	IPVersion Socket::GetIPVersion()
 	{
 		return ipversion;
+	}
+
+	PResult Socket::Listen(IPEndpoint endpoint, int backlog)
+	{
+		if (Bind(endpoint) != PResult::P_Success)
+		{
+			return PResult::P_NotYetImplemented;
+		}
+
+		int result = listen(handle, backlog);
+		if (result != 0) //if an error occured
+		{
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Accept(Socket& outSocket)
+	{
+		sockaddr_in addr = {};
+		int length = sizeof(sockaddr_in);
+		SocketHandle acceptedConnectionHandle = accept(handle, (sockaddr*)(&addr), &length);
+		if (acceptedConnectionHandle == INVALID_SOCKET)
+		{
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+
+		IPEndpoint newConnectionEndpoint((sockaddr*)(&addr));
+		std::cout << "New Connection accepted!" << std::endl;
+		newConnectionEndpoint.Print();
+		outSocket = Socket(IPVersion::IPv4, acceptedConnectionHandle);
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Connect(IPEndpoint endpoint)
+	{
+		sockaddr_in addr = endpoint.GetSockaddrIPv4();
+		int result = connect(handle, (sockaddr*)(&addr), sizeof(sockaddr_in));
+		if (result != 0) //an error occured
+		{
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Send(void* data, int numberOfBytes, int& bytesSent)
+	{
+		bytesSent = send(handle, (const char*)data, numberOfBytes, NULL);
+
+		if (bytesSent == SOCKET_ERROR)
+		{
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+
+		return PResult::P_Success;
+	}
+
+	PResult Socket::Recv(void* destination, int numberOfBytes, int& bytesRecieved)
+	{
+		bytesRecieved = recv(handle, (char*)destination, numberOfBytes, NULL);
+		if (bytesRecieved == 0) //the connection was gracefully closed
+		{
+			return PResult::P_NotYetImplemented;
+		}
+
+		if (bytesRecieved == SOCKET_ERROR)
+		{
+			int error = WSAGetLastError();
+			return PResult::P_NotYetImplemented;
+		}
+
+		return PResult::P_Success;
 	}
 
 	PResult Socket::SetSocketOption(SocketOption option, BOOL value)
