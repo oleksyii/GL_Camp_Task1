@@ -4,6 +4,7 @@
 #include "IPVersion.h"
 #include "SocketOption.h"
 #include "IPEndpoint.h"
+#include "Constants.h"
 
 namespace PNet
 {
@@ -18,8 +19,10 @@ namespace PNet
 		SocketHandle GetHandle();
 		PResult Accept(Socket& outSocket);
 		PResult Connect(IPEndpoint endpoint);
-		PResult Send(void* data, int numberOfBytes, int& bytesSent);
+		PResult Send(const void* data, int numberOfBytes, int& bytesSent);
 		PResult Recv(void* destination, int numberOfBytes, int& bytesRecieved);
+		PResult SendAll(const void* data, int numberOfBytes);
+		PResult RecvAll(void* destination, int numberOfBytes);
 		IPVersion GetIPVersion();
 		PResult Listen(IPEndpoint endpoint, int backlog = 5);
 	private:

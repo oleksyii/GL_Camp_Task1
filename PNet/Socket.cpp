@@ -17,7 +17,7 @@ namespace PNet
 
 		if (handle != INVALID_SOCKET)
 		{
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		handle = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); //attempt to create socket
@@ -25,12 +25,12 @@ namespace PNet
 		if (handle == INVALID_SOCKET) 
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		if (SetSocketOption(SocketOption::TCP_NoDelay, TRUE) != PResult::P_Success) 
 		{
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		return PResult::P_Success;
@@ -40,14 +40,14 @@ namespace PNet
 	{
 		if (handle == INVALID_SOCKET)
 		{
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		int result = closesocket(handle);
 		if (result != 0) //if error occured while trying to close th socket
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 		handle = INVALID_SOCKET;
 
@@ -62,7 +62,7 @@ namespace PNet
 		if (result != 0) //if error occured
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		return PResult::P_Success;
@@ -82,14 +82,14 @@ namespace PNet
 	{
 		if (Bind(endpoint) != PResult::P_Success)
 		{
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		int result = listen(handle, backlog);
 		if (result != 0) //if an error occured
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		return PResult::P_Success;
@@ -103,7 +103,7 @@ namespace PNet
 		if (acceptedConnectionHandle == INVALID_SOCKET)
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		IPEndpoint newConnectionEndpoint((sockaddr*)(&addr));
@@ -120,19 +120,19 @@ namespace PNet
 		if (result != 0) //an error occured
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 		return PResult::P_Success;
 	}
 
-	PResult Socket::Send(void* data, int numberOfBytes, int& bytesSent)
+	PResult Socket::Send(const void* data, int numberOfBytes, int& bytesSent)
 	{
 		bytesSent = send(handle, (const char*)data, numberOfBytes, NULL);
 
 		if (bytesSent == SOCKET_ERROR)
-		{
+		{	
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		return PResult::P_Success;
@@ -143,13 +143,53 @@ namespace PNet
 		bytesRecieved = recv(handle, (char*)destination, numberOfBytes, NULL);
 		if (bytesRecieved == 0) //the connection was gracefully closed
 		{
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		if (bytesRecieved == SOCKET_ERROR)
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
+		}
+
+		return PResult::P_Success;
+	}
+
+	PResult Socket::SendAll(const void* data, int numberOfBytes)
+	{
+		int totalBytesSent = 0;
+		
+		while (totalBytesSent < numberOfBytes)
+		{
+			int bytesRemaining = numberOfBytes - totalBytesSent;
+			int bytesSent = 0;
+			char* bufferOffset = (char*)data + bytesSent;
+			PResult result = Send(bufferOffset, bytesRemaining, bytesSent);
+			
+			if (result != PResult::P_Success)
+				return PResult::P_GenericError;
+			
+			totalBytesSent += bytesSent;
+		}
+
+		return PResult::P_Success;
+	}
+
+	PResult Socket::RecvAll(void* destination, int numberOfBytes)
+	{
+		int totalBytesRecieved = 0;
+
+		while (totalBytesRecieved < numberOfBytes)
+		{
+			int bytesRemaining = numberOfBytes - totalBytesRecieved;
+			int bytesSent = 0;
+			char* bufferOffset = (char*)destination + bytesSent;
+			PResult result = Recv(bufferOffset, bytesRemaining, bytesSent);
+
+			if (result != PResult::P_Success)
+				return PResult::P_GenericError;
+
+			totalBytesRecieved += bytesSent;
 		}
 
 		return PResult::P_Success;
@@ -164,13 +204,13 @@ namespace PNet
 			result = setsockopt(handle, IPPROTO_TCP, TCP_NODELAY, (const char*)&value, sizeof(value));
 			break;
 		default:
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		if (result != 0) // If an error occured
 		{
 			int error = WSAGetLastError();
-			return PResult::P_NotYetImplemented;
+			return PResult::P_GenericError;
 		}
 
 		return PResult::P_Success;
