@@ -16,8 +16,6 @@ namespace PNet
 
 		if (result == 1)
 		{
-			if (addr.S_un.S_addr != INADDR_NONE)
-			{
 				ip_string = ip;
 				hostname = ip;
 				
@@ -26,7 +24,6 @@ namespace PNet
 
 				ipversion = IPVersion::IPv4;
 				return;
-			}
 		}
 
 		//attempt to resolve hostname to ipv4 address
