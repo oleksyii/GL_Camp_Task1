@@ -1,6 +1,8 @@
 #include "Socket.h"
 #include <assert.h>
 #include <iostream>
+#include <unistd.h>
+#include "Constants.h"
 
 namespace PNet
 {
@@ -98,7 +100,11 @@ namespace PNet
 	PResult Socket::Accept(Socket& outSocket)
 	{
 		sockaddr_in addr = {};
-		int length = sizeof(sockaddr_in);
+		#ifdef _WIN32
+			int length = sizeof(sockaddr_in);
+		#else
+			socklen_t length = sizeof(sockaddr_in);
+		#endif
 		SocketHandle acceptedConnectionHandle = accept(handle, (sockaddr*)(&addr), &length);
 		if (acceptedConnectionHandle == INVALID_SOCKET)
 		{
@@ -127,7 +133,7 @@ namespace PNet
 
 	PResult Socket::Send(const void* data, int numberOfBytes, int& bytesSent)
 	{
-		bytesSent = send(handle, (const char*)data, numberOfBytes, NULL);
+		bytesSent = send(handle, (const char*)data, numberOfBytes, 0);
 
 		if (bytesSent == SOCKET_ERROR)
 		{	
@@ -140,7 +146,7 @@ namespace PNet
 
 	PResult Socket::Recv(void* destination, int numberOfBytes, int& bytesRecieved)
 	{
-		bytesRecieved = recv(handle, (char*)destination, numberOfBytes, NULL);
+		bytesRecieved = recv(handle, (char*)destination, numberOfBytes, 0);
 		if (bytesRecieved == 0) //the connection was gracefully closed
 		{
 			return PResult::P_GenericError;

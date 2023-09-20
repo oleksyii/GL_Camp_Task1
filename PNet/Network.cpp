@@ -3,6 +3,7 @@
 
 bool PNet::Network::Initialize()
 {
+    #ifdef _WIN32
     WSADATA wsadata;
     int result = WSAStartup(MAKEWORD(2, 2), &wsadata);
 
@@ -17,11 +18,13 @@ bool PNet::Network::Initialize()
         std::cerr << "Could not find the usable version of winsock API." << std::endl;
         return false;
     }
-
+    #endif
     return true;
 }
 
 void PNet::Network::Shutdown()
 {
+    #ifdef _WIN32
     WSACleanup();
+    #endif 
 }

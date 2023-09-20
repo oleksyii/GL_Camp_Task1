@@ -2,6 +2,9 @@
 
 #include <PNet/IncludeMe.h>
 #include <iostream>
+#include <unistd.h>
+
+#define Sleep(duration) usleep(duration*1000)
 
 using namespace PNet;
 

@@ -1,6 +1,7 @@
 #include "IPEndpoint.h"
 #include <assert.h>
 #include <iostream>
+#include <string.h>
 
 namespace PNet
 {
@@ -19,8 +20,8 @@ namespace PNet
 				ip_string = ip;
 				hostname = ip;
 				
-				ip_bytes.resize(sizeof(ULONG));
-				memcpy(&ip_bytes[0], &addr.S_un.S_addr, sizeof(ULONG));
+				ip_bytes.resize(sizeof(uint32_t));
+				memcpy(&ip_bytes[0], &addr.s_addr, sizeof(uint32_t));
 
 				ipversion = IPVersion::IPv4;
 				return;
@@ -35,14 +36,14 @@ namespace PNet
 		{
 			sockaddr_in* host_addr = reinterpret_cast<sockaddr_in*>(hostinfo->ai_addr);
 
-			//host_addr->sin_addr.S_un.S_addr
+			//host_addr->sin_addr.s_addr
 			ip_string.resize(IPv4_size);
 			inet_ntop(AF_INET, &host_addr->sin_addr, &ip_string[0], IPv4_size); //for ipv4 it needs to be 16, for ipv6 - 46
 			
 			hostname = ip;
-			ULONG ip_long = host_addr->sin_addr.S_un.S_addr;
-			ip_bytes.resize(sizeof(ULONG));
-			memcpy(&ip_bytes[0], &ip_long, sizeof(ULONG));
+			uint32_t ip_long = host_addr->sin_addr.s_addr;
+			ip_bytes.resize(sizeof(uint32_t));
+			memcpy(&ip_bytes[0], &ip_long, sizeof(uint32_t));
 
 			ipversion = IPVersion::IPv4;
 
@@ -62,8 +63,8 @@ namespace PNet
 		ipversion = IPVersion::IPv4;
 
 		port = ntohs(addrv4->sin_port);
-		ip_bytes.resize(sizeof(ULONG));
-		memcpy(&ip_bytes[0], &addrv4->sin_addr, sizeof(ULONG));
+		ip_bytes.resize(sizeof(uint32_t));
+		memcpy(&ip_bytes[0], &addrv4->sin_addr, sizeof(uint32_t));
 
 
 		ip_string.resize(IPv4_size);
@@ -101,7 +102,7 @@ namespace PNet
 		assert(ipversion == IPVersion::IPv4);
 		sockaddr_in addr = {};
 		addr.sin_family = AF_INET;
-		memcpy(&addr.sin_addr, &ip_bytes[0], sizeof(ULONG));
+		memcpy(&addr.sin_addr, &ip_bytes[0], sizeof(uint32_t));
 		addr.sin_port = htons(port);
 		return addr;
 	}
