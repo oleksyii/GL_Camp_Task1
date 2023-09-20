@@ -17,22 +17,14 @@ int main()
 			{
 				std::cout << "Succesfully conected to a server!" << std::endl;
 
-				std::string buffer = "";
-				buffer.resize(PNet::g_MaxPacketSize + 1);
-				memset(&buffer[0], 'A', PNet::g_MaxPacketSize + 1);
-								
+				Packet packet;
+				packet << std::string("This is a first string!");
+				packet << std::string("This is a second string!");
 				while (true)
 				{
-					uint32_t bufferSize = buffer.size();
-					bufferSize = htonl(bufferSize);
-					PResult result = socket.SendAll(&bufferSize, sizeof(uint32_t));
+					PResult result = socket.Send(packet);
 					if (result != PResult::P_Success)
-						break;
-
-					result = socket.SendAll(buffer.data(), buffer.size());
-					if (result != PResult::P_Success)
-						break;
-
+						break; 
 
 					std::cout << "Attempting to send chunk of data..." << std::endl;
 					Sleep(500);

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <string>
 #define WIN32_LEAN_AND_MEAN
 #include <WinSock2.h>
 
@@ -14,6 +15,10 @@ namespace PNet
 		Packet& operator << (uint32_t data);
 		Packet& operator >> (uint32_t& data);
 
-		std::vector<char>buffer
+		Packet& operator << (const std::string & data);
+		Packet& operator >> (std::string& data);
+
+		uint32_t extractionOffset = 0;
+		std::vector<char>buffer;
 	};
 }
