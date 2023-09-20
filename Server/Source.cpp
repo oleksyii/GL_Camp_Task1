@@ -40,15 +40,25 @@ int main()
 				{
 					std::cout << "New connection accepted." << std::endl;
 
-					std::string string1, string2;
+					std::string string1, string2, string3;
 					Packet packet;
 					while (true)
 					{
 						PResult result = newConnection.Recv(packet);
 						if (result != PResult::P_Success)
 							break;
-						packet >> string1;
-						packet >> string2;
+						try
+						{
+							packet >> string1;
+							packet >> string2;
+							packet >> string3;
+							
+						}
+						catch(PacketException& exc)
+						{
+							std::cout << exc.what() << std::endl;
+							break;
+						}
 						std::cout << string1 << std::endl;
 						std::cout << string2 << std::endl;
 					}
