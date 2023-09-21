@@ -47,6 +47,7 @@ bool ProcessPacket(Packet& packet)
 	{
 		std::lock_guard<std::mutex> lock(appNameMutex);
 		packet >> appName;
+		std::cout << appName;
 
 		// TODO:
 		// Remake the thing to be a dictionary to know whether app 
@@ -85,18 +86,11 @@ void HandleServerPakets(void* in)
 	PMYDATA nn = static_cast<PMYDATA>(in);
 	Socket socket = *(nn->socket);
 
-	if (socket.Listen(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
-	{
-		std::cout << "Socket succesfully listening to port 4790." << std::endl;
-		Socket newConnection;
-		if (socket.Accept(newConnection) == PResult::P_Success)
-		{
-			std::cout << "New connection accepted." << std::endl;
 
 			Packet packet;
 			while (true)
 			{
-				PResult result = newConnection.Recv(packet);
+				PResult result = socket.Recv(packet);
 				if (result != PResult::P_Success)
 					break;
 
@@ -104,9 +98,8 @@ void HandleServerPakets(void* in)
 					break;
 
 			}
-			newConnection.Close();
-		}
-	}
+			socket.Close();
+
 
 }
 
@@ -194,19 +187,16 @@ int main()
 				std::thread userInput(HandleServerPakets, static_cast<void*>(myData));
 				userInput.detach();
 
-				while (true)
+				while (appName == "")
 				{
-					if (appName == "")
-						Sleep(1000);
-					else
-						break;
-
+					Sleep(1000);
+						
 				}
 				// #3
 				//TODO:start a thread to handle the application
 
-				std::thread appThread(HandleApp);
-				appThread.detach();
+				//std::thread appThread(HandleApp);
+				//appThread.detach();
 
 				while (true)
 				{

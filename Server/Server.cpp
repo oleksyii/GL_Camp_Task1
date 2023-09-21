@@ -74,7 +74,10 @@ void HandleClientPackets(void* in)
 			while (true)
 			{
 				PResult result = newConnection.Recv(packet);
-				Packet stringPacket(PacketType::PT_ChatMessage);
+				if (result != P_Success)
+					break;
+				if (!ProcessPacket(packet))
+					break;
 			}
 			newConnection.Close();
 		}
