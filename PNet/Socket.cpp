@@ -1,7 +1,10 @@
 #include "Socket.h"
 #include <assert.h>
 #include <iostream>
+#ifndef _WIN32
 #include <unistd.h>
+#endif // !_WIN32
+
 #include "Constants.h"
 
 namespace PNet

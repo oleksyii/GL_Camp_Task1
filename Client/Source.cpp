@@ -2,9 +2,10 @@
 
 #include <PNet/IncludeMe.h>
 #include <iostream>
+#ifndef _WIN32
 #include <unistd.h>
-
 #define Sleep(duration) usleep(duration*1000)
+#endif // !_WIN32
 
 using namespace PNet;
 
@@ -16,7 +17,7 @@ int main()
 		if (socket.Create() == PResult::P_Success)
 		{
 			std::cout << "Socket successfully created." << std::endl;
-			if (socket.Connect(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
+			if (socket.Connect(IPEndpoint("192.168.0.2", 4790)) == PResult::P_Success)
 			{
 				std::cout << "Succesfully conected to a server!" << std::endl;
 
