@@ -261,4 +261,12 @@ namespace PNet
 		return PResult::P_Success;
 	}
 
+	bool Socket::operator!() const
+	{
+		if (handle != INVALID_SOCKET)
+			return true;
+		else
+			return false;
+	}
+
 }

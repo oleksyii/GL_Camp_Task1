@@ -27,6 +27,7 @@ namespace PNet
 		PResult Recv(Packet& packet);
 		IPVersion GetIPVersion();
 		PResult Listen(IPEndpoint endpoint, int backlog = 5);
+		bool operator!() const;
 	private:
 		PResult SetSocketOption(SocketOption option, BOOL value);
 		IPVersion ipversion = IPVersion::IPv4;
