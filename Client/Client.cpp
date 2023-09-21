@@ -87,7 +87,7 @@ void HandleServerPakets(void* in)
 
 	if (socket.Listen(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
 	{
-		std::cout << "Socket succesfully listening to port 4791." << std::endl;
+		std::cout << "Socket succesfully listening to port 4790." << std::endl;
 		Socket newConnection;
 		if (socket.Accept(newConnection) == PResult::P_Success)
 		{

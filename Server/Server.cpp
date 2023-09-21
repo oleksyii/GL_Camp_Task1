@@ -15,8 +15,8 @@ Socket Specific_For_Connection;
 
 
 typedef struct MyData {
-	Socket *socket;
-	MyData(Socket* ptr) : socket(ptr) {};
+	Socket socket;
+	MyData(Socket ptr) : socket(ptr) {};
 } MYDATA, *PMYDATA;
 
 
@@ -54,7 +54,7 @@ bool ProcessPacket(Packet& packet)
 void HandleClientPackets(void* in)
 {	
 	PMYDATA nn = static_cast<PMYDATA>(in);
-	Socket socket = *(nn->socket);
+	Socket socket = nn->socket;
 
 	if (socket.Listen(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
 	{
@@ -93,33 +93,34 @@ void HandleClientPackets(void* in)
 void HandleUserInput(void* in)
 {
 	PMYDATA nn = static_cast<PMYDATA>(in);
-	Socket socket = *(nn->socket);
+	Socket socket = nn->socket;
 		while (true)
 		{
-			// Get user input for the response
-			std::string userInput;
+			//// Get user input for the response
+			//std::string userInput;
 
-			{
-				std::lock_guard<std::mutex> lock(consoleMutex);
-				std::cout << "Enter <applicationNname.exe to start an app on client \nEnter the name again to stop it:" << std::endl;
-			}
+			//{
+			//	std::lock_guard<std::mutex> lock(consoleMutex);
+			//	std::cout << "Enter <applicationNname.exe to start an app on client \nEnter the name again to stop it:" << std::endl;
+			//}
 
-			std::getline(std::cin, userInput);
+			//std::getline(std::cin, userInput);
 
-			if (userInput == "stop")
-			{
-				stopClientThread = true;
+			//if (userInput == "stop")
+			//{
+			//	stopClientThread = true;
 
-				{
-					std::lock_guard<std::mutex> lock(consoleMutex);
-					std::cout << "Sending stop message to the client." << std::endl;
-				}
+			//	{
+			//		std::lock_guard<std::mutex> lock(consoleMutex);
+			//		std::cout << "Sending stop message to the client." << std::endl;
+			//	}
 
-				break;
-			}
+			//	break;
+			//}
 
 			Packet stringPacket(PacketType::PT_ChatMessage);
-			stringPacket << userInput;
+			//stringPacket << userInput;
+			stringPacket << "Hehlo world!";
 
 			PResult result;
 			result = socket.Send(stringPacket);
@@ -127,7 +128,8 @@ void HandleUserInput(void* in)
 			if (result != PResult::P_Success)
 				break;
 
-			std::cout << "Attempting to send "<< userInput << " ..."  << std::endl;
+			//std::cout << "Attempting to send "<< userInput << " ..."  << std::endl;
+			std::cout << "Attempting to send Hehlo ..." << std::endl;
 		}
 }
 
@@ -162,16 +164,18 @@ int main()
 			std::cout << "Socket successfully created." << std::endl;
 			
 			//Create a new thread to handle receiving from a Client
-			myData = new MYDATA(&socket);
+			myData = new MYDATA(socket);
 			std::thread clientHandle(HandleClientPackets, static_cast<void*>(myData));
 			clientHandle.detach();
+			
 
 			while (!Specific_For_Connection)
 			{
-				Sleep(1);
+				std::cout << "Works" << std::endl;
+				Sleep(1000);
 			}
 
-			myData = new MYDATA(&Specific_For_Connection);
+			myData = new MYDATA(Specific_For_Connection);
 			std::thread userInput(HandleUserInput, static_cast<void*>(myData));
 			userInput.join();
 			delete(myData);
