@@ -1,0 +1,4 @@
+/home/oleksii/GLTask1/build/CMakeFiles/Server.dir
+/home/oleksii/GLTask1/build/CMakeFiles/Client.dir
+/home/oleksii/GLTask1/build/CMakeFiles/edit_cache.dir
+/home/oleksii/GLTask1/build/CMakeFiles/rebuild_cache.dir
