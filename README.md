@@ -5,7 +5,7 @@
 * You may find compiled executables in "bin" folder
 * Run them as you wish!
 
-###Please note that procedure may differ for Windows compilation
+### Please note that procedure may differ for Windows compilation
   
 *A few rules on how to use a Client/Server application*
 1. First run Server and then Client.
