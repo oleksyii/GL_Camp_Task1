@@ -13,7 +13,11 @@ add_executable(Server Server/Server.cpp
                 PNet/PResult.h
                 PNet/SocketHandle.h
                 PNet/Socket.h       PNet/Socket.cpp
-                PNet/SocketOption.h)
+                PNet/SocketOption.h
+                Platform/IncludeMe.h
+                Platform/General_.h
+                Platform/Linux_.h   Platform/Linux_.cpp
+                Platform/Windows_.h Platform/Windows_.cpp)
 add_executable(Client Client/Client.cpp
                 PNet/Constants.h
                 PNet/IncludeMe.h
@@ -26,6 +30,10 @@ add_executable(Client Client/Client.cpp
                 PNet/PResult.h
                 PNet/Socket.h       PNet/Socket.cpp
                 PNet/SocketHandle.h
-                PNet/SocketOption.h)
+                PNet/SocketOption.h
+                Platform/IncludeMe.h
+                Platform/General_.h
+                Platform/Linux_.h   Platform/Linux_.cpp
+                Platform/Windows_.h Platform/Windows_.cpp)
 set_target_properties(Server PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 set_target_properties(Client PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")

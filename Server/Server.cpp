@@ -1,18 +1,6 @@
 //Server code
 #include <PNet/IncludeMe.h>
-#include <iostream>
-#include <thread>
-#include <string>
-#include <cstring>
-#include <atomic>
-#include <mutex>
-
-#ifndef _WIN32
-#include <unistd.h>
-#define Sleep(duration) usleep(duration * 1000)
-#endif // !_WIN32
-
-// #define Sleep(duration) usleep(duration * 1000)
+#include <Platform/IncludeMe.h>
 
 using namespace PNet;
 
@@ -72,11 +60,6 @@ void HandleClientConnection(void* in)
 		{
 			std::cout << "New connection accepted." << std::endl;
 			// #2
-			// Launch thread to get a user input
-			// The thread only gets user input from console and
-			// sends it to newConnection immediately
-
-
 			Packet packet;
 			while (true)
 			{
@@ -111,7 +94,7 @@ void HandleUserInput(void* in)
 
 			{
 				std::lock_guard<std::mutex> lock(consoleMutex);
-				std::cout << "Enter <applicationNname.exe to start an app on client \nEnter the name again to stop it:" << std::endl;
+				std::cout << "Enter <applicationName (with extention if windows) to start an app on client \nEnter the name again to stop it:" << std::endl;
 			}
 			
 			std::getline(std::cin, userInput);
@@ -140,7 +123,7 @@ void HandleUserInput(void* in)
 
 			std::cout << "Attempting to send "<< userInput << " ..."  << std::endl;
 			//std::cout << "Attempting to send Hehlo ..." << std::endl;
-			Sleep(1000);
+			Sleep_(1000);
 		}
 }
 
@@ -148,25 +131,7 @@ int main()
 {
 		
 	if (Network::Initialize()) {
-		std::cout << "Winsock API succesfully itialized." << std::endl;
-
-		//IPEndpoint test("www.google.com", 8080);
-		//if (test.GetIPVersion() == IPVersion::IPv4)
-		//{
-		//	std::cout 
-		//		<< "Hostname: " << test.GetHostName() << "\n"
-		//		<< "IP: " << test.GetIpString() << "\n"
-		//		<< "Port: " << test.GetPort() << "\n"
-		//		<< "IP Bytes..." << std::endl;
-		//	for (auto& digit : test.GetIPBytes())
-		//	{
-		//		std::cout << (int)digit << std::endl;
-		//	}
-		//}
-		//else
-		//{
-		//	std::cerr << "This is not a valid ipv4 addresss." << std::endl;
-		//}
+		std::cout << "API succesfully itialized." << std::endl;
 		PMYDATA myData;
 		Socket socket;
 		PResult result = socket.Create();
@@ -182,9 +147,7 @@ int main()
 
 			while (!Specific_For_Connection)
 			{
-				std::cout << "Awaiting for connection ..." << std::endl;
-				// Sleep(1000);
-				sleep(1);
+				Sleep_(1000);
 			}
 
 			myData = new MYDATA(Specific_For_Connection);
@@ -199,8 +162,7 @@ int main()
 
 	}
 	Network::Shutdown();
-	#ifdef _WIN32
-	system("pause");
-	#endif
+	Pause_();
+
 	return 0;
 } 
