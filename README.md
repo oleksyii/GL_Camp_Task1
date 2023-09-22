@@ -11,4 +11,7 @@
 1. First run Server and then Client.
 2. When Client connects to a Server, enter the name of the application you want to run.
 3. When you want to stop an app by sending a command from server - just enter the application's name again. Don't worry about therminal being messed up. It only accepts the letters you've entered.
-4. If you want to run an application again, you have to restart both Server and Client 
+4. If you want to run an application again, you have to restart both Server and Client
+
+*PLEASE NOTE*
+*This Server/Client application uses CMake to compile the files*
