@@ -21,23 +21,36 @@ for (auto integer : integerArray)
 #include <mutex>
 #include <locale>
 #include <codecvt>
+#include <map>
+
 #ifndef _WIN32
 #include <unistd.h>
 #define Sleep(duration) usleep(duration*1000)
 #endif // !_WIN32
 
+#define VARIABLE(name) bool _##name;
+
 using namespace PNet;
 
-std::atomic<bool> stopClientThread(false);
-std::mutex consoleMutex; // Mutex for console access
+std::atomic<bool> appCeased(false);
+std::mutex m_consoleAccess; // Mutex for console access
 std::string appName = "";
-std::mutex appNameMutex;
+std::mutex m_appNameAccess;
 
 typedef struct MyData {
 	Socket* socket;
 	MyData(Socket* ptr) : socket(ptr) {};
 } MYDATA, * PMYDATA;
 
+std::mutex m_tableAccess;
+std::map<std::string, bool> table;
+
+bool presentInMap(std::map<std::string, bool> map, std::string value)
+{
+	std::lock_guard<std::mutex> lock(m_tableAccess);
+	std::map<std::string, bool>::iterator it = map.find(value);
+	return(it == map.end() ? false : true);
+}
 
 bool ProcessPacket(Packet& packet)
 {
@@ -45,9 +58,24 @@ bool ProcessPacket(Packet& packet)
 	{
 	case PacketType::PT_ChatMessage:
 	{
-		std::lock_guard<std::mutex> lock(appNameMutex);
+		std::lock_guard<std::mutex> lock(m_appNameAccess);
 		packet >> appName;
-		std::cout << appName;
+		std::cout << appName << std::endl;
+		if (!presentInMap(table, appName))
+		{
+			std::lock_guard<std::mutex> lock(m_tableAccess);
+			table.insert(std::pair<std::string, bool>(appName, true));
+		}
+		else if(table[appName])
+		{
+			std::lock_guard<std::mutex> lock(m_tableAccess);
+			table[appName] = false;
+		}
+		else if (table[appName])
+		{
+			std::lock_guard<std::mutex> lock(m_tableAccess);
+			table[appName] = true;
+		}
 
 		// TODO:
 		// Remake the thing to be a dictionary to know whether app 
@@ -81,7 +109,7 @@ bool ProcessPacket(Packet& packet)
 * If the same name comes again it changes the atomic value to notify a thread to
 * force running app
 */
-void HandleServerPakets(void* in)
+void HandleReceivingPackets(void* in)
 {
 	PMYDATA nn = static_cast<PMYDATA>(in);
 	Socket socket = *(nn->socket);
@@ -117,10 +145,24 @@ void HandleSendingPackets(Socket& socket, Packet packet)
 
 void HandleApp()
 {
+	bool proceed = false;
+	{
+		std::lock_guard<std::mutex> lock(m_tableAccess);
+		std::lock_guard<std::mutex> lock2(m_appNameAccess);
+		if (table[appName])
+			proceed = true;
+	}
+	if (proceed)
+	{
+
 	// Define the path to the application you want to launch
 		// Convert the UTF-8 string to a UTF-16 wstrin
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-	std::wstring utf16String = converter.from_bytes(appName);
+	std::wstring utf16String;
+	{
+		std::lock_guard<std::mutex> lock(m_appNameAccess);
+		utf16String = converter.from_bytes(appName);
+	}
 
 	// CreateProcess parameters
 	STARTUPINFO si;
@@ -145,8 +187,9 @@ void HandleApp()
 	{
 		std::cerr << "Error creating process: " << GetLastError() << std::endl;
 		return;
+		appCeased = true;
 	}
-
+	std::cout << "succesfully created app PID: " << pi.dwProcessId << "\nThreadID: " << pi.dwThreadId << std::endl;
 	// Wait for the application to finish, checking every one second
 	DWORD exitCode;
 	while (true) 
@@ -154,16 +197,49 @@ void HandleApp()
 		if (WaitForSingleObject(pi.hProcess, 1000) == WAIT_OBJECT_0 &&
 			GetExitCodeProcess(pi.hProcess, &exitCode)) 
 		{
-			stopClientThread = true;
+			appCeased = true;
 			std::cout << "Application exited with code: " << exitCode << std::endl;
 			break;
+		}
+
+		//TODO:Kill the app if table says false
+		
+		// Terminate the process
+		{
+			std::lock_guard<std::mutex> lock(m_tableAccess);
+			std::lock_guard<std::mutex> lock2(m_appNameAccess);
+
+			if (!table[appName])
+			{
+				HANDLE hProc = OpenProcess(PROCESS_TERMINATE, FALSE, pi.dwProcessId);
+				if (TerminateProcess(hProc, 0) == 0)
+				{
+					std::cerr << "Error terminating process: " << GetLastError() << std::endl;
+					
+				}
+				else
+				{
+					std::cout << "The process PID: " << pi.dwProcessId << " was succesfully stopped." << std::endl;
+					CloseHandle(hProc);
+					appCeased = true;
+					break;
+				}
+
+				CloseHandle(hProc);
+			}
 		}
 	}
 
 	// Close process and thread handles
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+	}
+	else
+	{
+		return;
+	}
 
+	return;
 }
 
 
@@ -184,7 +260,7 @@ int main()
 				// #2
 				//start a thread #1 to listen for application's name
 				myData = new MYDATA(&socket);
-				std::thread userInput(HandleServerPakets, static_cast<void*>(myData));
+				std::thread userInput(HandleReceivingPackets, static_cast<void*>(myData));
 				userInput.detach();
 
 				while (appName == "")
@@ -193,10 +269,8 @@ int main()
 						
 				}
 				// #3
-				//TODO:start a thread to handle the application
-
-				//std::thread appThread(HandleApp);
-				//appThread.detach();
+				std::thread appThread(HandleApp);
+				appThread.detach();
 
 				while (true)
 				{
@@ -205,7 +279,7 @@ int main()
 
 
 					//main thread processes sending info on app status
-					if(!stopClientThread)
+					if(!appCeased)
 					{
 						// #4
 						Packet stringPacket(PacketType::PT_ChatMessage);
@@ -217,36 +291,13 @@ int main()
 					else
 					{
 						Packet stringPacket(PacketType::PT_ChatMessage);
-						stringPacket << std::string("App has deceased it's existance");
+						stringPacket << std::string("The app has ceased to exist");
 
 						HandleSendingPackets(socket, stringPacket);
-						stopClientThread = false;
+						appCeased = false;
 						break;
 					}
 				}
-				// Handle receiveng from Server 
-				// while(true)
-				// {
-				//
-				// socket.Recv() ...
-				// if (name recieved is present is names vector, then change the value)
-				// else
-				// launch a thread to control an app
-				// }
-				// 
-
-				// 
-				// Create a thread for each app to launch. Thread creates an app, checks 
-				// for its finish and checks for a variable from stop-words vector to change.
-				// If the variable changes - kills an app. Main thread then sends notification
-				// about application's disruptance
-				// 
-				// Or
-				// 
-				// You'll have to laucnh a thread here to listen of for a '"stop-word"
-				// when the word arrives, change the atomic variable to inform main thread 
-				// that the app shoud be stopped. Then send a packet about application's
-				// disruptance
 
 				delete(myData);
 			}

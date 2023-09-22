@@ -51,7 +51,7 @@ bool ProcessPacket(Packet& packet)
 	return true;
 }
 
-void HandleClientPackets(void* in)
+void HandleClientConnection(void* in)
 {	
 	PMYDATA nn = static_cast<PMYDATA>(in);
 	Socket socket = nn->socket;
@@ -99,31 +99,31 @@ void HandleUserInput(void* in)
 	Socket socket = nn->socket;
 		while (true)
 		{
-			//// Get user input for the response
-			//std::string userInput;
+			// Get user input for the response
+			std::string userInput;
 
-			//{
-			//	std::lock_guard<std::mutex> lock(consoleMutex);
-			//	std::cout << "Enter <applicationNname.exe to start an app on client \nEnter the name again to stop it:" << std::endl;
-			//}
+			{
+				std::lock_guard<std::mutex> lock(consoleMutex);
+				std::cout << "Enter <applicationNname.exe to start an app on client \nEnter the name again to stop it:" << std::endl;
+			}
+			
+			std::getline(std::cin, userInput);
 
-			//std::getline(std::cin, userInput);
+			if (userInput == "stop")
+			{
+				stopClientThread = true;
 
-			//if (userInput == "stop")
-			//{
-			//	stopClientThread = true;
+				{
+					std::lock_guard<std::mutex> lock(consoleMutex);
+					std::cout << "Sending stop message to the client." << std::endl;
+				}
 
-			//	{
-			//		std::lock_guard<std::mutex> lock(consoleMutex);
-			//		std::cout << "Sending stop message to the client." << std::endl;
-			//	}
-
-			//	break;
-			//}
+				break;
+			}
 
 			Packet stringPacket(PacketType::PT_ChatMessage);
-			//stringPacket << userInput;
-			stringPacket << "Hehlo world!";
+			stringPacket << userInput;
+			
 
 			PResult result;
 			result = socket.Send(stringPacket);
@@ -131,8 +131,9 @@ void HandleUserInput(void* in)
 			if (result != PResult::P_Success)
 				break;
 
-			//std::cout << "Attempting to send "<< userInput << " ..."  << std::endl;
-			std::cout << "Attempting to send Hehlo ..." << std::endl;
+			std::cout << "Attempting to send "<< userInput << " ..."  << std::endl;
+			//std::cout << "Attempting to send Hehlo ..." << std::endl;
+			Sleep(1000);
 		}
 }
 
@@ -168,13 +169,13 @@ int main()
 			
 			//Create a new thread to handle receiving from a Client
 			myData = new MYDATA(socket);
-			std::thread clientHandle(HandleClientPackets, static_cast<void*>(myData));
+			std::thread clientHandle(HandleClientConnection, static_cast<void*>(myData));
 			clientHandle.detach();
 			
 
 			while (!Specific_For_Connection)
 			{
-				std::cout << "Works" << std::endl;
+				//std::cout << "Awaiting for connection ..." << std::endl;
 				Sleep(1000);
 			}
 
