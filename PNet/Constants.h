@@ -16,6 +16,9 @@ namespace PNet
 	#ifndef closesocket
 		#define closesocket(fd) close(fd)
 	#endif
+	// #ifndef GetLastError()
+	// 	#define GetLastError() errno
+	// #endif
 
 	#endif
 }

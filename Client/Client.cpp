@@ -11,7 +11,7 @@ for (auto integer : integerArray)
 	integersPacket << integer;
 }
 */
-//Client code
+// Client code
 #include <PNet/IncludeMe.h>
 #include <iostream>
 #include <thread>
@@ -25,10 +25,12 @@ for (auto integer : integerArray)
 
 #ifndef _WIN32
 #include <unistd.h>
-#define Sleep(duration) usleep(duration*1000)
+#include <sys/types.h>
+#include <sys/wait.h>
+#define Sleep(duration) usleep(duration * 1000)
+#define GetLastError() errno
 #endif // !_WIN32
 
-#define VARIABLE(name) bool _##name;
 
 using namespace PNet;
 
@@ -37,10 +39,11 @@ std::mutex m_consoleAccess; // Mutex for console access
 std::string appName = "";
 std::mutex m_appNameAccess;
 
-typedef struct MyData {
-	Socket* socket;
-	MyData(Socket* ptr) : socket(ptr) {};
-} MYDATA, * PMYDATA;
+typedef struct MyData
+{
+	Socket *socket;
+	MyData(Socket *ptr) : socket(ptr){};
+} MYDATA, *PMYDATA;
 
 std::mutex m_tableAccess;
 std::map<std::string, bool> table;
@@ -49,10 +52,10 @@ bool presentInMap(std::map<std::string, bool> map, std::string value)
 {
 	std::lock_guard<std::mutex> lock(m_tableAccess);
 	std::map<std::string, bool>::iterator it = map.find(value);
-	return(it == map.end() ? false : true);
+	return (it == map.end() ? false : true);
 }
 
-bool ProcessPacket(Packet& packet)
+bool ProcessPacket(Packet &packet)
 {
 	switch (packet.GetPacketType())
 	{
@@ -66,7 +69,7 @@ bool ProcessPacket(Packet& packet)
 			std::lock_guard<std::mutex> lock(m_tableAccess);
 			table.insert(std::pair<std::string, bool>(appName, true));
 		}
-		else if(table[appName])
+		else if (table[appName])
 		{
 			std::lock_guard<std::mutex> lock(m_tableAccess);
 			table[appName] = false;
@@ -78,12 +81,12 @@ bool ProcessPacket(Packet& packet)
 		}
 
 		// TODO:
-		// Remake the thing to be a dictionary to know whether app 
+		// Remake the thing to be a dictionary to know whether app
 		// should be stopped or not
 
-		//std::string chatMessage;
-		//packet >> chatMessage;
-		//std::cout << "Chat Message: " << chatMessage << std::endl;
+		// std::string chatMessage;
+		// packet >> chatMessage;
+		// std::cout << "Chat Message: " << chatMessage << std::endl;
 		break;
 	}
 	case PacketType::PT_IntegerArray:
@@ -105,42 +108,37 @@ bool ProcessPacket(Packet& packet)
 	return true;
 }
 /*
-* The fucntion's purpose is to get a name of the app to laucnh.
-* If the same name comes again it changes the atomic value to notify a thread to
-* force running app
-*/
-void HandleReceivingPackets(void* in)
+ * The fucntion's purpose is to get a name of the app to laucnh.
+ * If the same name comes again it changes the atomic value to notify a thread to
+ * force running app
+ */
+void HandleReceivingPackets(void *in)
 {
 	PMYDATA nn = static_cast<PMYDATA>(in);
 	Socket socket = *(nn->socket);
 
+	Packet packet;
+	while (true)
+	{
+		PResult result = socket.Recv(packet);
+		if (result != PResult::P_Success)
+			break;
 
-			Packet packet;
-			while (true)
-			{
-				PResult result = socket.Recv(packet);
-				if (result != PResult::P_Success)
-					break;
-
-				if (!ProcessPacket(packet))
-					break;
-
-			}
-			socket.Close();
-
-
+		if (!ProcessPacket(packet))
+			break;
+	}
+	socket.Close();
 }
 
-void HandleSendingPackets(Socket& socket, Packet packet)
+void HandleSendingPackets(Socket &socket, Packet packet)
 {
-		PResult result;
-		result = socket.Send(packet);
+	PResult result;
+	result = socket.Send(packet);
 
-		if (result != PResult::P_Success)
-			return;
+	if (result != PResult::P_Success)
+		return;
 
-		std::cout << "Attempting to send chunk of data..." << std::endl;
-
+	std::cout << "Attempting to send chunk of data..." << std::endl;
 }
 
 void HandleApp()
@@ -152,100 +150,181 @@ void HandleApp()
 		if (table[appName])
 			proceed = true;
 	}
+#ifdef _WIN32
+	if (proceed)
+	{
+		// Define the path to the application you want to launch
+		// Convert the UTF-8 string to a UTF-16 wstrin
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring utf16String;
+		{
+			std::lock_guard<std::mutex> lock(m_appNameAccess);
+			utf16String = converter.from_bytes(appName);
+		}
+
+		// CreateProcess parameters
+		STARTUPINFO si;
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+
+		// Launch the application
+		if (!CreateProcess(
+				NULL,										// Application name (use NULL to use command line)
+				const_cast<wchar_t *>(utf16String.c_str()), // Command line
+				NULL,										// Process security attributes
+				NULL,										// Thread security attributes
+				FALSE,										// Inherit handles
+				0,											// Creation flags
+				NULL,										// Use parent's environment
+				NULL,										// Use parent's current directory
+				&si,										// STARTUPINFO structure
+				&pi											// PROCESS_INFORMATION structure
+				))
+		{
+			std::cerr << "Error creating process: " << GetLastError() << std::endl;
+			return;
+			appCeased = true;
+		}
+		std::cout << "succesfully created app PID: " << pi.dwProcessId << "\nThreadID: " << pi.dwThreadId << std::endl;
+		// Wait for the application to finish, checking every one second
+		DWORD exitCode;
+		while (true)
+		{
+			if (WaitForSingleObject(pi.hProcess, 1000) == WAIT_OBJECT_0 &&
+				GetExitCodeProcess(pi.hProcess, &exitCode))
+			{
+				appCeased = true;
+				std::cout << "Application exited with code: " << exitCode << std::endl;
+				break;
+			}
+
+			// TODO:Kill the app if table says false
+
+			// Terminate the process
+			{
+				std::lock_guard<std::mutex> lock(m_tableAccess);
+				std::lock_guard<std::mutex> lock2(m_appNameAccess);
+
+				if (!table[appName])
+				{
+					HANDLE hProc = OpenProcess(PROCESS_TERMINATE, FALSE, pi.dwProcessId);
+					if (TerminateProcess(hProc, 0) == 0)
+					{
+						std::cerr << "Error terminating process: " << GetLastError() << std::endl;
+					}
+					else
+					{
+						std::cout << "The process PID: " << pi.dwProcessId << " was succesfully stopped." << std::endl;
+						CloseHandle(hProc);
+						appCeased = true;
+						break;
+					}
+
+					CloseHandle(hProc);
+				}
+			}
+		}
+
+		// Close process and thread handles
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
+	else
+	{
+		return;
+	}
+#else
+
 	if (proceed)
 	{
 
-	// Define the path to the application you want to launch
-		// Convert the UTF-8 string to a UTF-16 wstrin
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-	std::wstring utf16String;
-	{
-		std::lock_guard<std::mutex> lock(m_appNameAccess);
-		utf16String = converter.from_bytes(appName);
-	}
+		pid_t childPid = fork(); // Create a child process
 
-	// CreateProcess parameters
-	STARTUPINFO si;
-	PROCESS_INFORMATION pi;
-	ZeroMemory(&si, sizeof(si));
-	si.cb = sizeof(si);
-	ZeroMemory(&pi, sizeof(pi));
-
-	// Launch the application
-	if (!CreateProcess(
-		NULL,                 // Application name (use NULL to use command line)
-		const_cast<wchar_t*>(utf16String.c_str()), // Command line
-		NULL,                 // Process security attributes
-		NULL,                 // Thread security attributes
-		FALSE,                // Inherit handles
-		0,                    // Creation flags
-		NULL,                 // Use parent's environment
-		NULL,                 // Use parent's current directory
-		&si,                  // STARTUPINFO structure
-		&pi                   // PROCESS_INFORMATION structure
-	)) 
-	{
-		std::cerr << "Error creating process: " << GetLastError() << std::endl;
-		return;
-		appCeased = true;
-	}
-	std::cout << "succesfully created app PID: " << pi.dwProcessId << "\nThreadID: " << pi.dwThreadId << std::endl;
-	// Wait for the application to finish, checking every one second
-	DWORD exitCode;
-	while (true) 
-	{
-		if (WaitForSingleObject(pi.hProcess, 1000) == WAIT_OBJECT_0 &&
-			GetExitCodeProcess(pi.hProcess, &exitCode)) 
+		if (childPid == -1)
 		{
-			appCeased = true;
-			std::cout << "Application exited with code: " << exitCode << std::endl;
-			break;
+			std::cerr << "Error creating a child process." << std::endl;
+			return;
 		}
-
-		//TODO:Kill the app if table says false
-		
-		// Terminate the process
+		else if (childPid == 0) // Inside the child
 		{
-			std::lock_guard<std::mutex> lock(m_tableAccess);
-			std::lock_guard<std::mutex> lock2(m_appNameAccess);
-
-			if (!table[appName])
+			// Child process code
+			std::lock_guard<std::mutex> lock(m_appNameAccess);
+			// Launch the application using exec
+			if (execlp(appName.c_str(), appName.c_str(), NULL) == -1)
 			{
-				HANDLE hProc = OpenProcess(PROCESS_TERMINATE, FALSE, pi.dwProcessId);
-				if (TerminateProcess(hProc, 0) == 0)
-				{
-					std::cerr << "Error terminating process: " << GetLastError() << std::endl;
-					
-				}
-				else
-				{
-					std::cout << "The process PID: " << pi.dwProcessId << " was succesfully stopped." << std::endl;
-					CloseHandle(hProc);
-					appCeased = true;
-					break;
-				}
-
-				CloseHandle(hProc);
+				std::cerr << "Error launching the application." << std::endl;
+				return;
 			}
 		}
-	}
+		else // Inside the parent
+		{
+			// Parent process code
 
-	// Close process and thread handles
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
+			while (true)
+			{
+				// Check if the child process has finished
+				int status;
+				pid_t result = waitpid(childPid, &status, WNOHANG);
+
+				if (result == -1)
+				{
+					std::cerr << "Error waiting for the child process." << std::endl;
+					return;
+				}
+				else if (result > 0)
+				{
+					// The child process has finished
+					if (WIFEXITED(status))
+					{
+						std::cout << "Application exited with status: " << WEXITSTATUS(status) << std::endl;
+						appCeased = true;
+					}
+					else
+					{
+						std::cout << "Application terminated abnormally." << std::endl;
+					}
+					break; // Exit the loop
+				}
+				// Terminate the process
+				{
+					std::lock_guard<std::mutex> lock(m_tableAccess);
+					std::lock_guard<std::mutex> lock2(m_appNameAccess);
+
+					if (!table[appName])
+					{
+						pid_t temp = childPid;
+						if (kill(childPid, SIGTERM) != 0)
+						{
+							std::cerr << "Error terminating process: " << GetLastError() << std::endl;
+						}
+						else
+						{
+							std::cout << "The process PID: " << temp << " was succesfully terminated." << std::endl;
+							appCeased = true;
+							break;
+						}
+					}
+				}
+				// Sleep(1000);
+				sleep(1);
+			}
+		}
 	}
 	else
 	{
 		return;
 	}
 
+#endif
 	return;
 }
 
-
 int main()
 {
-	if (Network::Initialize()) {
+	if (Network::Initialize())
+	{
 		std::cout << "Winsock API succesfully itialized." << std::endl;
 		PMYDATA myData;
 		Socket socket;
@@ -253,20 +332,20 @@ int main()
 		{
 			// #1
 			std::cout << "Socket successfully created." << std::endl;
-			if (socket.Connect(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
+			if (socket.Connect(IPEndpoint("127.0.0.1", 4799)) == PResult::P_Success)
 			{
 				std::cout << "Succesfully conected to a server!" << std::endl;
-				//The ACTUAL job is done here
-				// #2
-				//start a thread #1 to listen for application's name
+				// The ACTUAL job is done here
+				//  #2
+				// start a thread #1 to listen for application's name
 				myData = new MYDATA(&socket);
-				std::thread userInput(HandleReceivingPackets, static_cast<void*>(myData));
+				std::thread userInput(HandleReceivingPackets, static_cast<void *>(myData));
 				userInput.detach();
 
 				while (appName == "")
 				{
-					Sleep(1000);
-						
+					// Sleep(1000);
+					sleep(1);
 				}
 				// #3
 				std::thread appThread(HandleApp);
@@ -274,19 +353,18 @@ int main()
 
 				while (true)
 				{
-					//when error occurs - break;
+					// when error occurs - break;
 
-
-
-					//main thread processes sending info on app status
-					if(!appCeased)
+					// main thread processes sending info on app status
+					if (!appCeased)
 					{
 						// #4
 						Packet stringPacket(PacketType::PT_ChatMessage);
 						stringPacket << std::string("App is running");
 
 						HandleSendingPackets(socket, stringPacket);
-						Sleep(1000);
+						// Sleep(1000);
+						sleep(1);
 					}
 					else
 					{
@@ -299,7 +377,7 @@ int main()
 					}
 				}
 
-				delete(myData);
+				delete (myData);
 			}
 			else
 			{
@@ -311,8 +389,9 @@ int main()
 		{
 			std::cout << "Socket failed to create." << std::endl;
 		}
-
 	}
 	Network::Shutdown();
-	system("pause"); 
+	#ifdef _WIN32
+	system("pause");
+	#endif;
 }

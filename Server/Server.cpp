@@ -7,6 +7,13 @@
 #include <atomic>
 #include <mutex>
 
+#ifndef _WIN32
+#include <unistd.h>
+#define Sleep(duration) usleep(duration * 1000)
+#endif // !_WIN32
+
+// #define Sleep(duration) usleep(duration * 1000)
+
 using namespace PNet;
 
 std::atomic<bool> stopClientThread(false);
@@ -56,9 +63,9 @@ void HandleClientConnection(void* in)
 	PMYDATA nn = static_cast<PMYDATA>(in);
 	Socket socket = nn->socket;
 
-	if (socket.Listen(IPEndpoint("127.0.0.1", 4790)) == PResult::P_Success)
+	if (socket.Listen(IPEndpoint("127.0.0.1", 4799)) == PResult::P_Success)
 	{
-		std::cout << "Socket succesfully listening to port 4790." << std::endl;
+		std::cout << "Socket succesfully listening to port 4799." << std::endl;
 		Socket& newConnection = Specific_For_Connection;
 		// #1
 		if (socket.Accept(newConnection) == PResult::P_Success)
@@ -175,8 +182,9 @@ int main()
 
 			while (!Specific_For_Connection)
 			{
-				//std::cout << "Awaiting for connection ..." << std::endl;
-				Sleep(1000);
+				std::cout << "Awaiting for connection ..." << std::endl;
+				// Sleep(1000);
+				sleep(1);
 			}
 
 			myData = new MYDATA(Specific_For_Connection);
@@ -191,6 +199,8 @@ int main()
 
 	}
 	Network::Shutdown();
+	#ifdef _WIN32
 	system("pause");
+	#endif
 	return 0;
 } 

@@ -67,6 +67,7 @@ namespace PNet
 		if (result != 0) //if error occured
 		{
 			int error = WSAGetLastError();
+			std::cout << "Bind error was " << error << std::endl;
 			return PResult::P_GenericError;
 		}
 
@@ -87,6 +88,7 @@ namespace PNet
 	{
 		if (Bind(endpoint) != PResult::P_Success)
 		{
+			std::cout << "An error binding endpoint occured." << std::endl;
 			return PResult::P_GenericError;
 		}
 
@@ -94,6 +96,7 @@ namespace PNet
 		if (result != 0) //if an error occured
 		{
 			int error = WSAGetLastError();
+			std::cout << "An error #" << error << "occured." << std::endl;
 			return PResult::P_GenericError;
 		}
 
