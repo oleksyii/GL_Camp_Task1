@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/Server.dir/Server/Server.cpp.o CMakeFiles/Server.dir/PNet/IPEndpoint.cpp.o CMakeFiles/Server.dir/PNet/Network.cpp.o CMakeFiles/Server.dir/PNet/Packet.cpp.o CMakeFiles/Server.dir/PNet/Socket.cpp.o CMakeFiles/Server.dir/Platform/Linux_.cpp.o CMakeFiles/Server.dir/Platform/Windows_.cpp.o -o bin/Server 
